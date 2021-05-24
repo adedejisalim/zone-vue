@@ -13,7 +13,34 @@
   </div>
   
   <div class="view chat" v-else>
-    <h1>Chat View</h1>
+    <header>
+      <button class="logout" @click="Logout">Logout</button>
+
+      <h1>Welcome, {{state.username}}</h1>
+    </header>
+
+    <section class="chat-box">
+      <div v-for="message in state.messages" :key="message.key" :class="(message.username == state.username ? 'message current-user' : 'message')">
+        <div class="message-inner">
+          <div class="username">{{message.username}}</div>
+          <div class="content">{{message.content}}</div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <footer>
+      <form @submit.prevent="SendMessage">
+        <input 
+          type="text" 
+          v-model="inputMessage" 
+          placeholder="Write a message..."/>
+        <input 
+          type="submit"
+          value="Send"/>
+      </form>
+    </footer>
   </div>
 </template>
 
@@ -24,6 +51,7 @@ import db from './db';
 export default {
   setup(){
     const inputUsername = ref("");
+    const inputMessage = ref("");
 
     const state = reactive({
       username: '',
@@ -37,10 +65,52 @@ export default {
       }
     }
 
+    const Logout = () => {
+      state.username = "";
+    }
+
+    const SendMessage = () => {
+      const messageRef = db.database().ref("messages");
+
+      if (inputMessage.value === "" || inputMessage.value === null){
+        return;
+      }
+
+      const message = {
+        username: state.username,
+        content: inputMessage.value
+      }
+
+      messageRef.push(message);
+      inputMessage.value = "";
+    }
+
+    onMounted(() => {
+      const messageRef = db.database().ref("messages");
+
+      messageRef.on('value', snapshot => {
+        const data = snapshot.val();
+        let messages = [];
+
+        Object.keys(data).forEach(key => {
+          messages.push({
+            id: key,
+            username: data[key].username,
+            content: data[key].content
+          });
+        });
+
+        state.messages = messages;
+      })
+    });
+
     return {
       inputUsername,
       Login,
-      state
+      state,
+      inputMessage,
+      SendMessage,
+      Logout
     }
   }
   
